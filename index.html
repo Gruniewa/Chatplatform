@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fotogalerie</title>
+
+<style>
+  :root{
+    --bg: #0c0c0e;
+    --bg-elevated: #161618;
+    --bg-card: #1c1c1f;
+    --ink: #f2ede4;
+    --ink-dim: #9a958c;
+    --ink-faint: #5e5a53;
+    --accent: #d97a3f;
+    --line: #2a2a2d;
+    --danger: #c2543f;
+    --radius: 3px;
+    --serif: "Source Serif 4", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --mono: "JetBrains Mono", "SF Mono", Consolas, monospace;
+  }
+
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; background: var(--bg); color: var(--ink); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+  body{ min-height:100vh; }
+  ::selection{ background: #d97a3f33; color: var(--ink); }
+  button{ font-family: inherit; cursor:pointer; }
+  .hidden{ display:none !important; }
+
+  /* ---------- Topbar ---------- */
+  .topbar{
+    position: sticky; top:0; z-index: 20;
+    display:flex; align-items:center; justify-content: space-between;
+    padding: 22px clamp(20px, 4vw, 56px);
+    background: linear-gradient(to bottom, rgba(12,12,14,0.97), rgba(12,12,14,0.85));
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .brand{ display:flex; align-items:baseline; gap:10px; font-family: var(--serif); font-size: 22px; }
+  .brand .mark{ color: var(--accent); font-style: italic; }
+  .brand .count{ font-family: var(--mono); font-size: 11px; color: var(--ink-faint); letter-spacing: 0.04em; }
+
+  .btn{
+    border: 1px solid var(--line); background: var(--bg-elevated); color: var(--ink);
+    padding: 10px 18px; border-radius: var(--radius); font-size: 13px;
+    transition: border-color .15s ease, color .15s ease;
+  }
+  .btn:hover{ border-color: var(--accent); color: var(--accent); }
+  .btn.ghost{ background: transparent; }
+
+  /* ---------- Setup banner ---------- */
+  .setup-banner{
+    margin: 18px clamp(20px, 4vw, 56px) 0;
+    padding: 16px 20px;
+    border: 1px solid #6b4226;
+    background: #2a1d12;
+    border-radius: var(--radius);
+    font-size: 13px; line-height: 1.6; color: #f0c9a3;
+    display:flex; gap:14px; align-items:flex-start;
+  }
+  .setup-banner b{ color: #ffd9b0; }
+  .setup-banner .icon{ font-size: 18px; line-height: 1; margin-top: 1px; }
+
+  /* ---------- Views ---------- */
+  .view{ padding: 0 clamp(20px, 4vw, 56px) 80px; }
+  .view-header{ display:flex; align-items:flex-end; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin: 44px 0 28px; }
+  .view-header h1{ font-family: var(--serif); font-weight: 400; font-size: clamp(28px, 4vw, 40px); margin: 0; letter-spacing: -0.01em; }
+  .breadcrumb{ font-family: var(--mono); font-size: 12px; color: var(--ink-faint); display:flex; align-items:center; gap:8px; margin-bottom: 10px; }
+  .breadcrumb button{ background:none; border:none; color: var(--ink-dim); font-family: var(--mono); font-size: 12px; padding:0; }
+  .breadcrumb button:hover{ color: var(--accent); }
+
+  /* ---------- Album grid ---------- */
+  .album-grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 28px; }
+  .album-card{
+    position: relative; background: var(--bg-card); border: 1px solid var(--line);
+    border-radius: var(--radius); overflow: hidden; cursor: pointer;
+    transition: transform .2s ease, border-color .2s ease;
+  }
+  .album-card:hover{ transform: translateY(-3px); border-color: var(--accent); }
+  .album-thumb{
+    aspect-ratio: 4/3; background: #111113; background-size: cover; background-position: center;
+    display:flex; align-items:center; justify-content:center; color: var(--ink-faint); position: relative;
+  }
+  .album-thumb .ph-count{
+    position:absolute; top:10px; right:10px; font-family: var(--mono); font-size: 11px;
+    background: rgba(12,12,14,0.75); padding: 4px 8px; border-radius: 2px; color: var(--ink);
+  }
+  .album-empty-icon{ font-size: 34px; opacity:.5; }
+  .album-info{ padding: 16px 18px 18px; }
+  .album-info h3{ font-family: var(--serif); font-weight: 400; font-size: 19px; margin: 0 0 6px; }
+  .album-info p{ margin:0; font-size: 12px; color: var(--ink-faint); font-family: var(--mono); }
+
+  /* ---------- Photo grid ---------- */
+  .photo-grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; }
+  .photo-thumb{
+    position: relative; aspect-ratio: 1/1; border-radius: var(--radius); overflow: hidden;
+    cursor: pointer; background: var(--bg-card); border: 1px solid var(--line);
+  }
+  .photo-thumb img{ width:100%; height:100%; object-fit: cover; display:block; transition: transform .35s ease; }
+  .photo-thumb:hover img{ transform: scale(1.05); }
+
+  .empty-state{ padding: 90px 20px; text-align:center; color: var(--ink-faint); }
+  .empty-state .icon{ font-size: 38px; margin-bottom: 14px; opacity:.6; }
+  .empty-state p{ font-family: var(--serif); font-size: 18px; color: var(--ink-dim); margin: 0 0 4px;}
+  .empty-state span{ font-size: 13px; font-family: var(--mono); }
+
+  /* ---------- Lightbox ---------- */
+  .lightbox{
+    position: fixed; inset:0; z-index: 100; background: rgba(6,6,7,0.97);
+    display:flex; align-items:center; justify-content:center; flex-direction: column;
+  }
+  .lightbox-top{ position:absolute; top:0; left:0; right:0; display:flex; justify-content:space-between; align-items:center; padding: 20px clamp(16px,3vw,40px); z-index: 5; }
+  .lightbox-counter{ font-family: var(--mono); font-size: 12px; color: var(--ink-dim); letter-spacing: 0.04em; }
+  .lightbox-close{
+    width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); background: var(--bg-elevated);
+    color: var(--ink); display:flex; align-items:center; justify-content:center; font-size: 18px;
+  }
+  .lightbox-close:hover{ border-color: var(--accent); color: var(--accent); }
+  .lightbox-stage{ flex:1; width:100%; display:flex; align-items:center; justify-content:center; position: relative; padding: 70px clamp(50px, 8vw, 120px); }
+  .lightbox-stage img{ max-width: 100%; max-height: 78vh; object-fit: contain; border-radius: 2px; box-shadow: 0 30px 80px rgba(0,0,0,0.6); user-select: none; }
+  .lightbox-nav{
+    position:absolute; top:50%; transform: translateY(-50%); width: 50px; height:50px; border-radius: 50%;
+    border: 1px solid var(--line); background: rgba(22,22,24,0.7); color: var(--ink);
+    display:flex; align-items:center; justify-content:center; font-size: 20px;
+    transition: border-color .15s ease, color .15s ease;
+  }
+  .lightbox-nav:hover{ border-color: var(--accent); color: var(--accent); }
+  .lightbox-nav.prev{ left: clamp(10px, 2vw, 30px); }
+  .lightbox-nav.next{ right: clamp(10px, 2vw, 30px); }
+  .lightbox-nav:disabled{ opacity: .25; cursor:not-allowed; }
+  .lightbox-caption{ padding: 4px 20px 26px; text-align:center; font-family: var(--serif); font-size: 14px; color: var(--ink-dim); }
+
+  .loader{ display:flex; align-items:center; justify-content:center; gap: 10px; padding: 70px 0; color: var(--ink-faint); font-family: var(--mono); font-size: 13px; }
+  .spinner{ width: 16px; height:16px; border-radius:50%; border: 2px solid var(--line); border-top-color: var(--accent); animation: spin 0.8s linear infinite; }
+  @keyframes spin{ to{ transform: rotate(360deg); } }
+
+  @media (max-width: 560px){
+    .lightbox-stage{ padding: 60px 16px; }
+    .lightbox-nav{ width:42px; height:42px; font-size:17px; }
+    .lightbox-nav.prev{ left:6px; }
+    .lightbox-nav.next{ right:6px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <span class="mark">Galerie</span>
+    <span class="count" id="brandCount"></span>
+  </div>
+  <div id="topbarActions"></div>
+</div>
+
+<div id="setupBanner" class="setup-banner hidden">
+  <span class="icon">⚠</span>
+  <div>
+    <b>data.json konnte nicht geladen werden.</b><br>
+    Diese Seite muss über einen Webserver aufgerufen werden (z.B. GitHub Pages),
+    nicht per Doppelklick als lokale Datei — sonst blockiert der Browser das Nachladen
+    der data.json. Lokal zum Testen: einen kleinen lokalen Server starten (siehe Anleitung).
+  </div>
+</div>
+
+<div id="app" class="view"></div>
+
+<script>
+(function(){
+
+  let albumsData = [];
+  let currentAlbum = null;
+  let lightboxIndex = -1;
+
+  const appEl = document.getElementById('app');
+  const topbarActions = document.getElementById('topbarActions');
+  const brandCount = document.getElementById('brandCount');
+  const setupBanner = document.getElementById('setupBanner');
+
+  /* ---------------------------------------------------------
+     INIT — load data.json (relative path, works on GitHub Pages)
+  --------------------------------------------------------- */
+  async function init(){
+    renderTopbar('albums');
+    appEl.innerHTML = `<div class="view-header"><h1>Alben</h1></div><div class="loader"><div class="spinner"></div> Lade Alben…</div>`;
+    try{
+      const res = await fetch('data.json', { cache: 'no-store' });
+      if(!res.ok) throw new Error('data.json nicht gefunden (HTTP ' + res.status + ')');
+      const json = await res.json();
+      albumsData = Array.isArray(json.albums) ? json.albums : [];
+      setupBanner.classList.add('hidden');
+      renderAlbumGrid();
+    }catch(err){
+      console.error(err);
+      setupBanner.classList.remove('hidden');
+      appEl.innerHTML = `<div class="view-header"><h1>Alben</h1></div>
+        <div class="empty-state"><div class="icon">⚠</div><p>Daten konnten nicht geladen werden</p><span>${escapeHtml(err.message||String(err))}</span></div>`;
+    }
+  }
+  init();
+
+  /* ---------------------------------------------------------
+     TOPBAR
+  --------------------------------------------------------- */
+  function renderTopbar(mode){
+    if(mode === 'albums'){
+      brandCount.textContent = albumsData.length ? albumsData.length + ' ALBEN' : '';
+      topbarActions.innerHTML = '';
+    } else if(mode === 'photos'){
+      brandCount.textContent = currentAlbum ? (currentAlbum.photos||[]).length + ' FOTOS' : '';
+      topbarActions.innerHTML = `<button class="btn ghost" id="btnBack">← Alle Alben</button>`;
+      document.getElementById('btnBack').onclick = ()=>{ currentAlbum=null; renderTopbar('albums'); renderAlbumGrid(); };
+    }
+  }
+
+  /* ---------------------------------------------------------
+     ALBUM GRID
+  --------------------------------------------------------- */
+  function renderAlbumGrid(){
+    renderTopbar('albums');
+    let html = `<div class="view-header"><h1>Alben</h1></div>`;
+
+    if(albumsData.length === 0){
+      html += `
+        <div class="empty-state">
+          <div class="icon">▢</div>
+          <p>Noch keine Alben</p>
+          <span>Trage Alben und Fotos in der Datei data.json ein.</span>
+        </div>`;
+      appEl.innerHTML = html;
+      return;
+    }
+
+    html += `<div class="album-grid">`;
+    for(const al of albumsData){
+      const photos = al.photos || [];
+      const coverUrl = photos.length ? photoPath(al, photos[0]) : null;
+      const bg = coverUrl ? `style="background-image:url('${coverUrl}')"` : '';
+      html += `
+        <div class="album-card" data-id="${escapeHtml(al.id)}">
+          <div class="album-thumb" ${bg}>
+            ${coverUrl ? '' : '<span class="album-empty-icon">▢</span>'}
+            <span class="ph-count">${photos.length} Foto${photos.length===1?'':'s'}</span>
+          </div>
+          <div class="album-info">
+            <h3>${escapeHtml(al.name)}</h3>
+            <p>Album</p>
+          </div>
+        </div>`;
+    }
+    html += `</div>`;
+    appEl.innerHTML = html;
+
+    appEl.querySelectorAll('.album-card').forEach(card=>{
+      card.addEventListener('click', ()=>{
+        const id = card.getAttribute('data-id');
+        const al = albumsData.find(a=>a.id===id);
+        if(al) openAlbum(al);
+      });
+    });
+  }
+
+  function photoPath(al, photo){
+    // Bilder liegen erwartungsgemäß unter fotos/<album-id>/<dateiname>
+    return 'fotos/' + al.id + '/' + photo.file;
+  }
+
+  /* ---------------------------------------------------------
+     PHOTO GRID
+  --------------------------------------------------------- */
+  function openAlbum(al){
+    currentAlbum = al;
+    renderTopbar('photos');
+    renderPhotoGrid();
+  }
+
+  function renderPhotoGrid(){
+    const photos = currentAlbum.photos || [];
+    let html = `
+      <div class="breadcrumb"><button id="crumbBack">Alben</button> / ${escapeHtml(currentAlbum.name)}</div>
+      <div class="view-header"><h1>${escapeHtml(currentAlbum.name)}</h1></div>`;
+
+    if(photos.length === 0){
+      html += `
+        <div class="empty-state">
+          <div class="icon">▤</div>
+          <p>Noch keine Fotos in diesem Album</p>
+          <span>Fotos in den Ordner fotos/${escapeHtml(currentAlbum.id)}/ legen und in data.json eintragen.</span>
+        </div>`;
+      appEl.innerHTML = html;
+    } else {
+      html += `<div class="photo-grid">`;
+      photos.forEach((p, idx)=>{
+        const src = photoPath(currentAlbum, p);
+        html += `
+          <div class="photo-thumb" data-idx="${idx}">
+            <img src="${src}" loading="lazy" alt="${escapeHtml(p.caption || p.file)}">
+          </div>`;
+      });
+      html += `</div>`;
+      appEl.innerHTML = html;
+    }
+
+    document.getElementById('crumbBack').onclick = ()=>{ currentAlbum=null; renderTopbar('albums'); renderAlbumGrid(); };
+
+    appEl.querySelectorAll('.photo-thumb').forEach(tile=>{
+      tile.addEventListener('click', ()=>{
+        const idx = parseInt(tile.getAttribute('data-idx'),10);
+        openLightbox(idx);
+      });
+    });
+  }
+
+  /* ---------------------------------------------------------
+     LIGHTBOX (Vollbild mit Vor/Zurück)
+  --------------------------------------------------------- */
+  function openLightbox(idx){
+    lightboxIndex = idx;
+    const overlay = document.createElement('div');
+    overlay.className = 'lightbox';
+    overlay.id = 'lightboxOverlay';
+    overlay.innerHTML = `
+      <div class="lightbox-top">
+        <span class="lightbox-counter" id="lbCounter"></span>
+        <button class="lightbox-close" id="lbClose">✕</button>
+      </div>
+      <div class="lightbox-stage">
+        <button class="lightbox-nav prev" id="lbPrev">‹</button>
+        <img id="lbImage" src="" alt="">
+        <button class="lightbox-nav next" id="lbNext">›</button>
+      </div>
+      <div class="lightbox-caption" id="lbCaption"></div>
+    `;
+    document.body.appendChild(overlay);
+
+    document.getElementById('lbClose').onclick = closeLightbox;
+    overlay.addEventListener('click', (e)=>{ if(e.target === overlay) closeLightbox(); });
+    document.getElementById('lbPrev').onclick = ()=> navigateLightbox(-1);
+    document.getElementById('lbNext').onclick = ()=> navigateLightbox(1);
+    document.addEventListener('keydown', lightboxKeyHandler);
+
+    renderLightboxImage();
+  }
+
+  function lightboxKeyHandler(e){
+    if(e.key === 'Escape') closeLightbox();
+    if(e.key === 'ArrowLeft') navigateLightbox(-1);
+    if(e.key === 'ArrowRight') navigateLightbox(1);
+  }
+
+  function navigateLightbox(dir){
+    const photos = currentAlbum.photos || [];
+    const newIdx = lightboxIndex + dir;
+    if(newIdx < 0 || newIdx >= photos.length) return;
+    lightboxIndex = newIdx;
+    renderLightboxImage();
+  }
+
+  function renderLightboxImage(){
+    const photos = currentAlbum.photos || [];
+    const p = photos[lightboxIndex];
+    const img = document.getElementById('lbImage');
+    img.src = photoPath(currentAlbum, p);
+    img.alt = p.caption || p.file;
+    document.getElementById('lbCaption').textContent = p.caption || '';
+    document.getElementById('lbCounter').textContent = `${lightboxIndex+1} / ${photos.length}`;
+    document.getElementById('lbPrev').disabled = lightboxIndex === 0;
+    document.getElementById('lbNext').disabled = lightboxIndex === photos.length - 1;
+  }
+
+  function closeLightbox(){
+    const overlay = document.getElementById('lightboxOverlay');
+    if(overlay) overlay.remove();
+    document.removeEventListener('keydown', lightboxKeyHandler);
+    lightboxIndex = -1;
+  }
+
+  /* ---------------------------------------------------------
+     UTIL
+  --------------------------------------------------------- */
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, m => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[m]));
+  }
+
+})();
+</script>
+</body>
+</html>

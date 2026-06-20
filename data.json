@@ -1,0 +1,19 @@
+{
+  "albums": [
+    {
+      "id": "album-1",
+      "name": "Beispielalbum 1",
+      "photos": [
+        { "file": "foto1.jpg", "caption": "" },
+        { "file": "foto2.jpg", "caption": "" }
+      ]
+    },
+    {
+      "id": "album-2",
+      "name": "Beispielalbum 2",
+      "photos": [
+        { "file": "foto1.jpg", "caption": "" }
+      ]
+    }
+  ]
+}
